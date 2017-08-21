@@ -4,7 +4,7 @@
 #ifndef AE_OS_WIN
 	#include <AE_General.r>
 #endif
-	
+
 resource 'PiPL' (16000) {
 	{
 		Kind {
@@ -14,7 +14,7 @@ resource 'PiPL' (16000) {
 			"Halftone"
 		},
 		Category {
-			"Xavier's Disco Kit"
+			"Meatbags"
 		},
 #ifdef AE_OS_WIN
 	#ifdef AE_PROC_INTELx64
@@ -57,4 +57,3 @@ resource 'PiPL' (16000) {
 		}
 	}
 };
-
