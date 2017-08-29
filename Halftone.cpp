@@ -1,4 +1,4 @@
-#include "Halftone.h"
+#include "Halftone.hpp"
 #include <math.h>
 
 static PF_Err
@@ -96,41 +96,33 @@ Halftone16 (
 	AEGP_SuiteHandler suites(master->in_data->pica_basicP);
 
 	if (master) {
-		double x, y;
-		SamplePoints16 K, R, B, G;
-		PF_Pixel16 output;
+		// sample rotated grid, get dots
+		double x = (double)xL;
+		double y = (double)yL;
+		SamplePoints16 K = SampleGrid16(SAMPLE_KEY, master->angle_k, x, y, master, &suites);
+		PF_Pixel16 output = BlankPixel16();
 
-		// sample rotated grid and get colour weights
-		x = (double)xL;
-		y = (double)yL;
-		
-		SampleGrid16(&K, SAMPLE_KEY, master->angle_k, x, y, master, &suites);
-
-		if (!master->use_greyscale) {
-			SampleGrid16(&R, SAMPLE_RED, master->angle_r, x, y, master, &suites);
-			SampleGrid16(&G, SAMPLE_GREEN, master->angle_g, x, y, master, &suites);
-			SampleGrid16(&B, SAMPLE_BLUE, master->angle_b, x, y, master, &suites);
-		}
-
-		// write colours to pixel
-		
 		if (master->use_greyscale) {
-			output.alpha = output.red = output.blue = output.green = MAX_16;
-			WriteToOutput16(K, &output);
+			// write output to pixel
+			WriteToOutput16(K, output);
 		} else {
-			output.alpha = output.red = output.blue = output.green = 0;
-
+			// sample RGB grids
+			SamplePoints16 R = SampleGrid16(SAMPLE_RED, master->angle_r, x, y, master, &suites);
+			SamplePoints16 G = SampleGrid16(SAMPLE_GREEN, master->angle_g, x, y, master, &suites);
+			SamplePoints16 B = SampleGrid16(SAMPLE_BLUE, master->angle_b, x, y, master, &suites);
+			
+			// write output to pixel
 			if (!CheckCollisions(R, G, B, K)) {
 				output.alpha = output.red = output.blue = output.green = MAX_16;
 			} else { 
-				WriteToOutput16(R, &output);
-				WriteToOutput16(B, &output);
-				WriteToOutput16(G, &output);
-				WriteToOutput16(K, &output);
+				WriteToOutput16(R, output);
+				WriteToOutput16(B, output);
+				WriteToOutput16(G, output);
+				WriteToOutput16(K, output);
 			}
 		}
 
-		// place
+		// place pixel
 		out->alpha = MAX_16;
 		out->red = output.red;
 		out->blue = output.blue;
@@ -165,8 +157,11 @@ Render (
 	// get input layer & set sample region
 	PF_EffectWorld *inputLayer = &params[INPUT_LAYER]->u.ld;
 	master.world = &params[INPUT_LAYER]->u.ld;
+	master.effect_world = params[INPUT_LAYER]->u.ld;
 	master.in_data = in_data;
 	master.samp_pb.src = &params[INPUT_LAYER]->u.ld;
+	master.samp_pb.x_radius = D2FIX(min(8, master.radius_max));
+	master.samp_pb.y_radius = D2FIX(min(8, master.radius_max));
 
 	if (PF_WORLD_IS_DEEP(output)) {
 		ERR(
