@@ -1,15 +1,13 @@
 # graphics
 
-- scale dot sizes to brightness / colour percentage
-- compound colours
-- overlapping radii
-- anti-aliasing
+- *compound* colours
 
 # features
 
+- options: RGB to CYM dots
 - 8-bit colour support
 
 # testing
 
-- 32/ 64 bit versions
+- 32/ 64 bit
 - windows/ ios

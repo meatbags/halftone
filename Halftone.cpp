@@ -100,7 +100,7 @@ Halftone16 (
 		double x = (double)xL;
 		double y = (double)yL;
 		SamplePoints16 K = SampleGrid16(SAMPLE_KEY, master->angle_k, x, y, master, &suites);
-		PF_Pixel16 output = BlankPixel16();
+		PF_Pixel16 output = BlankPixel16(MAX_16, MAX_16, MAX_16);
 
 		if (master->use_greyscale) {
 			// write output to pixel
@@ -108,17 +108,25 @@ Halftone16 (
 		} else {
 			// sample RGB grids
 			SamplePoints16 R = SampleGrid16(SAMPLE_RED, master->angle_r, x, y, master, &suites);
-			SamplePoints16 G = SampleGrid16(SAMPLE_GREEN, master->angle_g, x, y, master, &suites);
 			SamplePoints16 B = SampleGrid16(SAMPLE_BLUE, master->angle_b, x, y, master, &suites);
-			
+			SamplePoints16 G = SampleGrid16(SAMPLE_GREEN, master->angle_g, x, y, master, &suites);
+
 			// write output to pixel
+			output.red = 0;
+			output.blue = 0;
+			output.green = 0;
+
 			if (!CheckCollisions(R, G, B, K)) {
 				output.alpha = output.red = output.blue = output.green = MAX_16;
-			} else { 
+			} else {
 				WriteToOutput16(R, output);
 				WriteToOutput16(B, output);
 				WriteToOutput16(G, output);
-				WriteToOutput16(K, output);
+				A_u_short diff = MAX_16 - max(output.red, max(output.blue, output.green));
+				output.red += diff;
+				output.blue += diff;
+				output.green += diff;
+				//WriteToOutput16(K, output);
 			}
 		}
 

@@ -115,10 +115,17 @@ typedef struct Interface {
 // methods
 
 PF_Pixel16 
-BlankPixel16 () {
+BlankPixel16 (
+	A_u_short R,
+	A_u_short B,
+	A_u_short G
+) {
 	PF_Pixel16 p;
 
-	p.alpha = p.red = p.blue = p.green = MAX_16;
+	p.alpha = MAX_16;
+	p.red = R;
+	p.blue = B;
+	p.green = G;
 
 	return p;
 }
@@ -159,6 +166,12 @@ Point RotateCoordinates (
 	return p;
 }
 
+double easing (
+	double x
+) {
+	return x * x;
+}
+
 static PF_Err
 Colour16Radius (
 	Point16 &p,
@@ -170,7 +183,7 @@ Colour16Radius (
 
 	// convert to radius
 	if (key == SAMPLE_KEY) {
-		p.radius = size * (1.0 - ((pixel.red + pixel.blue + pixel.green) / 3.) / (double)(MAX_16));
+		p.radius = size * (easing(1.0 - ((pixel.red + pixel.blue + pixel.green) / 3.) / (double)(MAX_16)));
 	} else {
 		// get HLS
 		double R, G, B, H, L, S, MAX, MIN, ANGLE, DIFF;
@@ -201,7 +214,7 @@ Colour16Radius (
 
 		// get hue difference
 		ANGLE = (key == SAMPLE_RED) ? HUE_RED : ((key == SAMPLE_BLUE) ? HUE_BLUE : HUE_GREEN );
-		DIFF = abs(atan2(sin(ANGLE - H), cos(ANGLE - H))) / PI;
+		DIFF = 1 - abs(atan2(sin(H - ANGLE), cos(H - ANGLE))) / PI;
 
 		// limit
 
@@ -268,7 +281,7 @@ SampleGrid16 (
 	
 	// process radii
 	
-	size = master->radius_max;
+	size = master->radius_max * 0.75;
 	Colour16Radius(sample.p0, sample.p0.pixel, key, size);
 	Colour16Radius(sample.p1, sample.p1.pixel, key, size);
 	Colour16Radius(sample.p2, sample.p2.pixel, key, size);
@@ -301,10 +314,24 @@ bool CheckCollisions (
 	return (R.collision || B.collision || G.collision || K.collision);
 }
 
-double easing (
-	double x
+double GetAA16 (
+	SamplePoints16 sample
 ) {
-	return x * x;
+	double aa = 1;
+
+	if (sample.p0.distance >= 0 && sample.p1.distance >= 0 && sample.p2.distance >= 0 && sample.p3.distance >= 0) {
+		aa = 0;
+	} else if (sample.p0.distance < -1 || sample.p1.distance < -1 || sample.p2.distance < -1 || sample.p3.distance < -1) {
+		aa = 1;
+	} else {
+		double a = (sample.p0.distance >= 0) ? 0 : easing(-sample.p0.distance);
+		double b = (sample.p1.distance >= 0) ? 0 : easing(-sample.p1.distance);
+		double c = (sample.p2.distance >= 0) ? 0 : easing(-sample.p2.distance);
+		double d = (sample.p3.distance >= 0) ? 0 : easing(-sample.p3.distance);
+		aa = min(1, a + b + c + d);
+	}
+
+	return aa;
 }
 
 static PF_Err
@@ -313,32 +340,25 @@ WriteToOutput16 (
 	PF_Pixel16 &out
 ) {
 	PF_Err err = PF_Err_NONE;
+	double aa = GetAA16(sample);
 
-	if (sample.p0.distance < 0 || sample.p1.distance < 0 || sample.p2.distance < 0 || sample.p3.distance < 0) {
-		switch (sample.colour_key) {
-			case (SAMPLE_KEY):
-				if (sample.p0.distance < -2 || sample.p1.distance < -2 || sample.p2.distance < -2 || sample.p3.distance < -2) {
-					out.red = out.blue = out.green = 0;
-				} else {
-					double a = (sample.p0.distance >= 0) ? 0 : (1 - easing(sample.p0.distance / -2)) * MAX_16;
-					double b = (sample.p1.distance >= 0) ? 0 : (1 - easing(sample.p1.distance / -2)) * MAX_16;
-					double c = (sample.p2.distance >= 0) ? 0 : (1 - easing(sample.p2.distance / -2)) * MAX_16;
-					double d = (sample.p3.distance >= 0) ? 0 : (1 - easing(sample.p3.distance / -2)) * MAX_16;
-					out.red = out.blue = out.green = min(MAX_16, (A_u_short)floor(a + b + c + d));
-				}
-				break;
-			case (SAMPLE_RED):
-				out.red = MAX_16;
-				break;
-			case (SAMPLE_BLUE):
-				out.blue = MAX_16;
-				break;
-			case (SAMPLE_GREEN):
-				out.green = MAX_16;
-				break;
-			default:
-				break;
-		}
+	switch (sample.colour_key) {
+		case (SAMPLE_KEY):
+			out.red -= (A_u_short)floor(aa * out.red);
+			out.blue -= (A_u_short)floor(aa * out.blue);
+			out.green -= (A_u_short)floor(aa * out.green);
+			break;
+		case (SAMPLE_RED):
+			out.red = (A_u_short)floor(aa * MAX_16);
+			break;
+		case (SAMPLE_BLUE):
+			out.blue = (A_u_short)floor(aa * MAX_16);
+			break;
+		case (SAMPLE_GREEN):
+			out.green = (A_u_short)floor(aa * MAX_16);
+			break;
+		default:
+			break;
 	}
 
 	return err;
