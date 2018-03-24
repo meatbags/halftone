@@ -22,16 +22,16 @@ typedef unsigned short PixelType;
 #include "AE_GeneralPlug.h"
 #include "AEFX_ChannelDepthTpl.h"
 #include "AEGP_SuiteHandler.h"
-#include <math.h>
 
 #define	MAJOR_VERSION 1
 #define	MINOR_VERSION 0
 #define	BUG_VERSION	0
 #define	STAGE_VERSION PF_Stage_DEVELOP
 #define	BUILD_VERSION 1
+// PF_Fixed = long, PF_FpLong = double
 #define D2FIX(x) (((long)x)<<16)
 #define FIX2D(x) (x / ((double)(1L << 16)))
-#define PI 3.141593
+#define PI 3.14159265
 
 enum {
 	INPUT_LAYER = 0,
@@ -45,7 +45,7 @@ enum {
 };
 
 typedef struct {
-	PF_FpLong radiusF;
+	PF_Fixed radiusF;
 	PF_Fixed angle_kF;
 	PF_Fixed angle_rF;
 	PF_Fixed angle_gF;

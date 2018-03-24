@@ -1,6 +1,101 @@
 #include "Halftone.hpp"
 #include <math.h>
 
+static PF_Err Halftone8(
+	void *refcon,
+	A_long xL,
+	A_long yL,
+	PF_Pixel8 *inP,
+	PF_Pixel8 *outP
+) {
+	PF_Err err = PF_Err_NONE;
+	register HalftoneInfo *info = (HalftoneInfo*)refcon;
+	PF_InData *in_data = &(info->in_data);
+	AEGP_SuiteHandler suites(in_data->pica_basicP);
+	PF_Fixed xF = D2FIX(xL) - (D2FIX(xL) % info->radiusF);
+	PF_Fixed yF = D2FIX(yL) - (D2FIX(yL) % info->radiusF);
+	ERR(suites.Sampling8Suite1()->subpixel_sample(in_data->effect_ref, xF, yF, &info->samp_pb, outP));
+	double samp_radiusF = (outP->red + outP->green + outP->blue) / double(3 * PF_MAX_CHAN8) * FIX2D(info->radiusF);
+	
+	if (hypot(double(xF - D2FIX(xL)), double(yF - D2FIX(yL))) > D2FIX(samp_radiusF)) {
+		outP->alpha = PF_MAX_CHAN8;
+		outP->red = PF_MAX_CHAN8;
+		outP->green = PF_MAX_CHAN8;
+		outP->blue = PF_MAX_CHAN8;
+	} else {
+		outP->alpha = 0;
+		outP->red = 0;
+		outP->green = 0;
+		outP->blue = 0;
+	}
+
+	return err;
+}
+
+static PF_Err
+Halftone16(
+	void *refcon,
+	A_long xL,
+	A_long yL,
+	PF_Pixel16 *inP,
+	PF_Pixel16 *outP
+) {
+	PF_Err err = PF_Err_NONE;
+	register HalftoneInfo *info = (HalftoneInfo*)refcon;
+	PF_InData *in_data = &(info->in_data);
+	AEGP_SuiteHandler suites(in_data->pica_basicP);
+	PF_Fixed xF = xL << 16;
+	PF_Fixed yF = yL << 16;
+
+	ERR(
+		suites.Sampling16Suite1()->subpixel_sample16(
+			in_data->effect_ref,
+			xF,
+			yF,
+			&info->samp_pb,
+			outP
+		)
+	);
+
+	return err;
+}
+
+static PF_Err
+Render(
+	PF_InData		*in_data,
+	PF_OutData		*out_data,
+	PF_ParamDef		*params[],
+	PF_LayerDef		*output
+) {
+	PF_Err err = PF_Err_NONE;
+	AEGP_SuiteHandler suites(in_data->pica_basicP);
+	A_long linesL = output->extent_hint.bottom - output->extent_hint.top;
+	HalftoneInfo info;
+	PF_EffectWorld *inputP = &params[INPUT_LAYER]->u.ld;
+
+	// get user options
+	AEFX_CLR_STRUCT(info);
+	info.radiusF = D2FIX(params[PARAM_RADIUS]->u.fs_d.value);
+	info.angle_kF = params[PARAM_ANGLE_K]->u.ad.value * D2FIX(PF_RAD_PER_DEGREE);
+	info.angle_rF = params[PARAM_ANGLE_R]->u.ad.value * D2FIX(PF_RAD_PER_DEGREE);
+	info.angle_gF = params[PARAM_ANGLE_G]->u.ad.value * D2FIX(PF_RAD_PER_DEGREE);
+	info.angle_bF = params[PARAM_ANGLE_B]->u.ad.value * D2FIX(PF_RAD_PER_DEGREE);
+	info.greyscaleB = PF_Boolean((params[PARAM_USE_GREYSCALE]->u.bd.value));
+	info.in_data = *in_data;
+	info.ref = in_data->effect_ref;
+	info.samp_pb.src = inputP;
+	info.samp_pb.x_radius = min(8, info.radiusF);
+	info.samp_pb.y_radius = min(8, info.radiusF);
+
+	if (PF_WORLD_IS_DEEP(output)) {
+		ERR(suites.Iterate16Suite1()->iterate(in_data, 0, linesL, inputP, NULL, (void*)&info, Halftone16, output));
+	} else {
+		ERR(suites.Iterate8Suite1()->iterate(in_data, 0, linesL, inputP, NULL, (void*)&info, Halftone8, output));
+	}
+
+	return err;
+}
+
 static PF_Err About(
 	PF_InData *in_data,
 	PF_OutData *out_data,
@@ -47,85 +142,6 @@ static PF_Err ParamsSetup(
 	out_data->num_params = PARAM_COUNT;
 
 	return PF_Err_NONE;
-}
-
-static PF_Err Halftone8(
-	void *refcon,
-	A_long xL,
-	A_long yL,
-	PF_Pixel8 *in,
-	PF_Pixel8 *out
-) {
-	PF_Err err = PF_Err_NONE;
-	Interface *master = reinterpret_cast<Interface*>(refcon);
-	AEGP_SuiteHandler suites(master->in_data->pica_basicP);
-
-	if (master) {
-		out->alpha = PF_MAX_CHAN8;
-		out->red = (xL % 2 == 0) ? A_u_char(0) : PF_MAX_CHAN8;
-		out->blue = (yL % 2 == 0) ? A_u_char(0) : PF_MAX_CHAN8;
-		out->green = ((xL + yL) % 2 == 0) ? A_u_char(0) : PF_MAX_CHAN8;
-	}
-
-	return err;
-}
-
-static PF_Err
-Halftone16(
-	void *refcon,
-	A_long xL,
-	A_long yL,
-	PF_Pixel16 *in,
-	PF_Pixel16 *out
-) {
-	PF_Err err = PF_Err_NONE;
-	Interface *master = reinterpret_cast<Interface*>(refcon);
-	AEGP_SuiteHandler suites(master->in_data->pica_basicP);
-
-	if (master) {
-		out->alpha = PF_MAX_CHAN16;
-		out->red = PF_MAX_CHAN16;
-		out->blue = PF_MAX_CHAN16;
-		out->green = PF_MAX_CHAN16;
-	}
-
-	return err;
-}
-
-static PF_Err
-Render(
-	PF_InData		*in_data,
-	PF_OutData		*out_data,
-	PF_ParamDef		*params[],
-	PF_LayerDef		*output
-) {
-	PF_Err err = PF_Err_NONE;
-	AEGP_SuiteHandler suites(in_data->pica_basicP);
-	A_long linesL = output->extent_hint.bottom - output->extent_hint.top;
-	HalftoneInfo info;
-	PF_EffectWorld *inputP = &params[INPUT_LAYER]->u.ld;
-
-	// get user options
-	AEFX_CLR_STRUCT(info);
-	info.radiusF = params[PARAM_RADIUS]->u.fs_d.value;
-	info.angle_kF = params[PARAM_ANGLE_K]->u.ad.value * PF_RAD_PER_DEGREE;
-	info.angle_rF = params[PARAM_ANGLE_R]->u.ad.value * PF_RAD_PER_DEGREE;
-	info.angle_gF = params[PARAM_ANGLE_G]->u.ad.value * PF_RAD_PER_DEGREE;
-	info.angle_bF = params[PARAM_ANGLE_B]->u.ad.value * PF_RAD_PER_DEGREE;
-	info.greyscaleB = (PF_Boolean)(params[PARAM_USE_GREYSCALE]->u.bd.value);
-	info.in_data = *in_data;
-	info.ref = in_data->effect_ref;
-	info.samp_pb.src = inputP;
-	info.samp_pb.x_radius = min(8, info.radiusF);
-	info.samp_pb.y_radius = min(8, info.radiusF);
-
-	if (PF_WORLD_IS_DEEP(output)) {
-		ERR(suites.Iterate16Suite1()->iterate(in_data, 0, linesL, inputP, NULL, (void*)&master, Halftone16, output));
-	} else {
-		ERR(suites.Iterate8Suite1()->iterate(in_data, 0, linesL, inputP, NULL, (void*)&master, Halftone8, output));
-	}
-
-	return err;
 }
 
 DllExport
