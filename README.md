@@ -1,14 +1,10 @@
-# halftone
+# Halftone
+A colour-halftone plugin for Adobe After Effects.
 
-Colour halftone plugin for Adobe After Effects.
+# Use
+Download halftone.aex and copy it to the AfterEffects plugin directory, ie ```[ install location ]\Adobe\Adobe After Effects [ version ]\Support Files\Plug-ins```.
 
-# use
-
-Binaries coming soon.
-
-# build
-
-1. Get After Effects SDK (CC 2015) https://console.adobe.io/downloads/ae
-2. To set up your environment, follow steps on p.36 of the After Effects SDK Guide (included in SDK)
-3. Compile and save .aex file to ```Adobe\Adobe After Effects [version]\Support Files\Plug-ins\Effects```
-4. Open After Effects and make stuff!
+# Build & Modify
+Get the After Effects SDK CC 2015 https://console.adobe.io/downloads/ae.
+Set your output dir to the AfterEffects plugin directory, ie ```[ install location ]\Adobe\Adobe After Effects [ version ]\Support Files\Plug-ins\MyPlugins```.
+Modify as desired, compile, and restart AE.

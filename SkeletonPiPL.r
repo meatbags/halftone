@@ -4,7 +4,7 @@
 #ifndef AE_OS_WIN
 	#include <AE_General.r>
 #endif
-
+	
 resource 'PiPL' (16000) {
 	{
 		Kind {
@@ -38,7 +38,7 @@ resource 'PiPL' (16000) {
 			PF_PLUG_IN_SUBVERS
 		},
 		AE_Effect_Version {
-			524289	/* 1.0 */
+			524289	/* v1.0 */
 		},
 		AE_Effect_Info_Flags {
 			0
@@ -47,13 +47,14 @@ resource 'PiPL' (16000) {
 			0x02000000 //50332160
 		},
 		AE_Effect_Global_OutFlags_2 {
-			0x0
+		0x00000000
 		},
 		AE_Effect_Match_Name {
-			"ADBE_Meatbags_Halftone"
+			"ADBE Halftone"
 		},
 		AE_Reserved_Info {
 			0
 		}
 	}
 };
+
