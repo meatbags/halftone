@@ -10,9 +10,7 @@
 struct Vector {
 	double x;
 	double y;
-
 	Vector(double xD, double yD) : x(xD), y(yD) {}
-
 	Vector getProjected(Vector origin, Vector normal, double step, double half_step) {
 		// find minimum offset to rotated grid
 		double dotN = normal.x * (x - origin.x) + normal.y * (y - origin.y);
@@ -30,20 +28,16 @@ struct Vector {
 			y - normal.y * scale_norm - normal.x * scale_line
 		);
 	}
-
 	double getLength() {
 		return hypot(x, y);
 	}
-
 	double distanceTo(Vector v) {
 		return hypot(v.x - x, v.y - y);
 	}
-
 	void set(double xD, double yD) {
 		x = xD;
 		y = yD;
 	}
-
 	void normalise() {
 		double h = hypot(x, y);
 		if (h != 0.) {
@@ -52,11 +46,5 @@ struct Vector {
 		}
 	}
 };
-
-// how to project
-// const vec = Maths.subtractVector(point, origin);
-// const dist = Maths.dotProduct(normal, vec);
-// const proj = Maths.subtractVector(point, Maths.scaleVector(normal, dist));
-// get projected point, distance to origin, stagger, project back (stagger reverse vec)
 
 #endif // HALFTONE_MATHS_H
