@@ -12,6 +12,7 @@ typedef unsigned short PixelType;
 #include <Windows.h>
 #endif
 
+#include <math.h>
 #include "entry.h"
 #include "AE_Effect.h"
 #include "AE_EffectCB.h"
@@ -22,16 +23,13 @@ typedef unsigned short PixelType;
 #include "AE_GeneralPlug.h"
 #include "AEFX_ChannelDepthTpl.h"
 #include "AEGP_SuiteHandler.h"
+#include "HalftoneMaths.hpp"
 
 #define	MAJOR_VERSION 1
 #define	MINOR_VERSION 0
 #define	BUG_VERSION	0
 #define	STAGE_VERSION PF_Stage_DEVELOP
 #define	BUILD_VERSION 1
-// PF_Fixed = long, PF_FpLong = double
-#define D2FIX(x) (((long)x)<<16)
-#define FIX2D(x) (x / ((double)(1L << 16)))
-#define PI 3.14159265
 
 enum {
 	INPUT_LAYER = 0,
@@ -45,15 +43,21 @@ enum {
 };
 
 typedef struct {
-	PF_Fixed radiusF;
-	PF_Fixed angle_kF;
-	PF_Fixed angle_rF;
-	PF_Fixed angle_gF;
-	PF_Fixed angle_bF;
+	double grid_stepD;
+	double grid_half_stepD;
+	double angle_kD;
+	double angle_rD;
+	double angle_gD;
+	double angle_bD;
 	PF_InData in_data;
 	PF_SampPB samp_pb;
 	PF_Boolean greyscaleB;
 	PF_ProgPtr ref;
+	Vector originV = Vector(0, 0);
+	Vector normal_kV = Vector(0, 0);
+	Vector normal_rV = Vector(0, 0);
+	Vector normal_gV = Vector(0, 0);
+	Vector normal_bV = Vector(0, 0);
 } HalftoneInfo;
 
 #ifdef __cplusplus
