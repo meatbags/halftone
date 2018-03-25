@@ -11,24 +11,48 @@ static PF_Err Halftone8(
 	register HalftoneInfo *info = (HalftoneInfo*)refcon;
 	PF_InData *in_data = &(info->in_data);
 	AEGP_SuiteHandler suites(in_data->pica_basicP);
-
-	// get colour grid positions
 	Vector vec(xL, yL);
-	Vector keyV = vec.getProjected(info->originV, info->normal_kV, info->grid_stepD, info->grid_half_stepD);
-	ERR(suites.Sampling8Suite1()->subpixel_sample(in_data->effect_ref, D2FIX(keyV.x), D2FIX(keyV.y), &info->samp_pb, outP));
-	double samp_radius = (1.0 - (outP->red + outP->green + outP->blue) / (3.0 * PF_MAX_CHAN8)) * info->grid_half_stepD;
 
-	if (vec.distanceTo(keyV) <= samp_radius) {
-		outP->alpha = PF_MAX_CHAN8;
+	// sample colour grid
+	Vector channel_0 = vec.getProjected(info->origin, info->normal_0, info->grid_step, info->grid_half_step);
+	ERR(suites.Sampling8Suite1()->subpixel_sample(in_data->effect_ref, D2FIX(channel_0.x), D2FIX(channel_0.y), &info->samp_pb, outP));
+	double blackness = 1.0 - (outP->red + outP->green + outP->blue) / 765.0;
+	double radius_0 = blackness * info->grid_step;
+	bool ch0 = vec.getDistanceTo(channel_0) <= radius_0;
+
+	Vector channel_1 = vec.getProjected(info->origin, info->normal_1, info->grid_step, info->grid_half_step);
+	ERR(suites.Sampling8Suite1()->subpixel_sample(in_data->effect_ref, D2FIX(channel_1.x), D2FIX(channel_1.y), &info->samp_pb, outP));
+	double cyan = (outP->blue + outP->green) / 2.0;
+	double cyanness = max(0.0, min(1.0, (cyan - outP->red) / 128.0));
+	double radius_1 = cyanness * info->grid_step * blackness;
+	bool ch1 = vec.getDistanceTo(channel_1) <= radius_1;
+
+	Vector channel_2 = vec.getProjected(info->origin, info->normal_2, info->grid_step, info->grid_half_step);
+	ERR(suites.Sampling8Suite1()->subpixel_sample(in_data->effect_ref, D2FIX(channel_2.x), D2FIX(channel_2.y), &info->samp_pb, outP));
+	double magenta = (outP->red + outP->blue) / 2.0;
+	double magentaness = max(0.0, min(1.0, (magenta - outP->green) / 128.0));
+	double radius_2 = magentaness * info->grid_step * blackness;
+	bool ch2 = vec.getDistanceTo(channel_2) <= radius_2;
+
+	Vector channel_3 = vec.getProjected(info->origin, info->normal_3, info->grid_step, info->grid_half_step);
+	ERR(suites.Sampling8Suite1()->subpixel_sample(in_data->effect_ref, D2FIX(channel_3.x), D2FIX(channel_3.y), &info->samp_pb, outP));
+	double yellow = (outP->red + outP->green) / 2.0;
+	double yellowness = max(0.0, min(1.0, (yellow - outP->blue) / 128.0));
+	double radius_3 = yellowness * info->grid_step * blackness;
+	bool ch3 = vec.getDistanceTo(channel_3) <= radius_3;
+
+
+	if (!ch0) {	
+		outP->red = (ch1) ? 0 : 255;
+		outP->green = (ch2) ? 0 : 255;
+		outP->blue = (ch3) ? 0 : 255;
+	} else {
 		outP->red = 0;
 		outP->green = 0;
 		outP->blue = 0;
-	} else {
-		outP->alpha = PF_MAX_CHAN8;
-		outP->red = PF_MAX_CHAN8;
-		outP->green = PF_MAX_CHAN8;
-		outP->blue = PF_MAX_CHAN8;
 	}
+
+	outP->alpha = inP->alpha;
 
 	return err;
 }
@@ -76,24 +100,27 @@ Render(
 
 	// get user options
 	AEFX_CLR_STRUCT(info);
-	info.grid_stepD = (double)params[PARAM_RADIUS]->u.fs_d.value;
-	info.grid_half_stepD = info.grid_stepD * 0.5;
-	info.angle_kD = FIX2D(params[PARAM_ANGLE_K]->u.ad.value) * PF_RAD_PER_DEGREE;
-	info.angle_rD = FIX2D(params[PARAM_ANGLE_R]->u.ad.value) * PF_RAD_PER_DEGREE;
-	info.angle_gD = FIX2D(params[PARAM_ANGLE_G]->u.ad.value) * PF_RAD_PER_DEGREE;
-	info.angle_bD = FIX2D(params[PARAM_ANGLE_B]->u.ad.value) * PF_RAD_PER_DEGREE;
-	info.greyscaleB = PF_Boolean((params[PARAM_USE_GREYSCALE]->u.bd.value));
+	info.grid_step = (double)params[PARAM_RADIUS]->u.fs_d.value;
+	info.grid_half_step = info.grid_step * 0.5;
+	info.angle_0 = FIX2D(params[PARAM_ANGLE_0]->u.ad.value) * PF_RAD_PER_DEGREE;
+	info.angle_1 = FIX2D(params[PARAM_ANGLE_1]->u.ad.value) * PF_RAD_PER_DEGREE;
+	info.angle_2 = FIX2D(params[PARAM_ANGLE_2]->u.ad.value) * PF_RAD_PER_DEGREE;
+	info.angle_3 = FIX2D(params[PARAM_ANGLE_3]->u.ad.value) * PF_RAD_PER_DEGREE;
+	info.greyscale = PF_Boolean((params[PARAM_USE_GREYSCALE]->u.bd.value));
 	info.in_data = *in_data;
 	info.ref = in_data->effect_ref;
 	info.samp_pb.src = inputP;
-	info.samp_pb.x_radius = D2FIX(min(4.0, info.grid_stepD));
-	info.samp_pb.y_radius = D2FIX(min(4.0, info.grid_stepD));
+	info.samp_pb.x_radius = D2FIX(min(2.0, info.grid_step));
+	info.samp_pb.y_radius = D2FIX(min(2.0, info.grid_step));
 
 	// make vectors
-	double centre_x = inputP->width * 0.5 - fmod(inputP->width * 0.5, info.grid_stepD);
-	double centre_y = inputP->height * 0.5 - fmod(inputP->height * 0.5, info.grid_stepD);
-	info.originV.set(centre_x, centre_y);
-	info.normal_kV.set(cos(info.angle_kD + PI * 0.5), sin(info.angle_kD + PI * 0.5));
+	double centre_x = inputP->width * 0.5 - fmod(inputP->width * 0.5, info.grid_step);
+	double centre_y = inputP->height * 0.5 - fmod(inputP->height * 0.5, info.grid_step);
+	info.origin.set(centre_x, centre_y);
+	info.normal_0.set(cos(info.angle_0 + HALF_PI), sin(info.angle_0 + HALF_PI));
+	info.normal_1.set(cos(info.angle_1 + HALF_PI), sin(info.angle_1 + HALF_PI));
+	info.normal_2.set(cos(info.angle_2 + HALF_PI), sin(info.angle_2 + HALF_PI));
+	info.normal_3.set(cos(info.angle_3 + HALF_PI), sin(info.angle_3 + HALF_PI));
 
 	if (PF_WORLD_IS_DEEP(output)) {
 		ERR(suites.Iterate16Suite1()->iterate(in_data, 0, linesL, inputP, NULL, (void*)&info, Halftone16, output));
@@ -136,15 +163,15 @@ static PF_Err ParamsSetup(
 ) {
 	PF_ParamDef	def;
 	AEFX_CLR_STRUCT(def);
-	PF_ADD_FLOAT_SLIDER("Radius", 0, 128, 0, 32, 0, 16, 0, 0, 0, PARAM_RADIUS);
+	PF_ADD_FLOAT_SLIDER("Size", 0, 256, 0, 32, 0, 6, 0, 0, 0, PARAM_RADIUS);
 	AEFX_CLR_STRUCT(def);
-	PF_ADD_ANGLE("Black", 45, PARAM_ANGLE_K);
+	PF_ADD_ANGLE("Black", 45, PARAM_ANGLE_0);
 	AEFX_CLR_STRUCT(def);
-	PF_ADD_ANGLE("Red", 75, PARAM_ANGLE_R);
+	PF_ADD_ANGLE("Channel 1", 75, PARAM_ANGLE_1);
 	AEFX_CLR_STRUCT(def);
-	PF_ADD_ANGLE("Green", 15, PARAM_ANGLE_G);
+	PF_ADD_ANGLE("Channel 2", 15, PARAM_ANGLE_2);
 	AEFX_CLR_STRUCT(def);
-	PF_ADD_ANGLE("Blue", 0, PARAM_ANGLE_B);
+	PF_ADD_ANGLE("Channel 3", 0, PARAM_ANGLE_3);
 	AEFX_CLR_STRUCT(def);
 	PF_ADD_CHECKBOXX("Greyscale", 0, 0, PARAM_USE_GREYSCALE);
 	out_data->num_params = PARAM_COUNT;

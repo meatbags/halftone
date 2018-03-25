@@ -2,15 +2,17 @@
 #ifndef HALFTONE_MATHS_H
 #define HALFTONE_MATHS_H
 
-// PF_Fixed = long 32, PF_FpLong = double 64
-#define D2FIX(x) (((long)x)<<16) // also A_Long -> PF_Fixed
+// PF_Fixed = long, PF_FpLong = double
+#define D2FIX(x) (((long)x)<<16)
 #define FIX2D(x) (x / ((double)(1L << 16)))
 #define PI 3.14159265
+#define HALF_PI 1.57079632
 
 struct Vector {
 	double x;
 	double y;
 	Vector(double xD, double yD) : x(xD), y(yD) {}
+	
 	Vector getProjected(Vector origin, Vector normal, double step, double half_step) {
 		// find minimum offset to rotated grid
 		double dotN = normal.x * (x - origin.x) + normal.y * (y - origin.y);
@@ -28,16 +30,20 @@ struct Vector {
 			y - normal.y * scale_norm - normal.x * scale_line
 		);
 	}
+
 	double getLength() {
 		return hypot(x, y);
 	}
-	double distanceTo(Vector v) {
+
+	double getDistanceTo(Vector v) {
 		return hypot(v.x - x, v.y - y);
 	}
+
 	void set(double xD, double yD) {
 		x = xD;
 		y = yD;
 	}
+
 	void normalise() {
 		double h = hypot(x, y);
 		if (h != 0.) {

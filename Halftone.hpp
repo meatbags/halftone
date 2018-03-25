@@ -34,30 +34,30 @@ typedef unsigned short PixelType;
 enum {
 	INPUT_LAYER = 0,
 	PARAM_RADIUS,
-	PARAM_ANGLE_K,
-	PARAM_ANGLE_R,
-	PARAM_ANGLE_G,
-	PARAM_ANGLE_B,
+	PARAM_ANGLE_0,
+	PARAM_ANGLE_1,
+	PARAM_ANGLE_2,
+	PARAM_ANGLE_3,
 	PARAM_USE_GREYSCALE,
 	PARAM_COUNT
 };
 
 typedef struct {
-	double grid_stepD;
-	double grid_half_stepD;
-	double angle_kD;
-	double angle_rD;
-	double angle_gD;
-	double angle_bD;
+	double grid_step;
+	double grid_half_step;
+	double angle_0;
+	double angle_1;
+	double angle_2;
+	double angle_3;
 	PF_InData in_data;
 	PF_SampPB samp_pb;
-	PF_Boolean greyscaleB;
+	PF_Boolean greyscale;
 	PF_ProgPtr ref;
-	Vector originV = Vector(0, 0);
-	Vector normal_kV = Vector(0, 0);
-	Vector normal_rV = Vector(0, 0);
-	Vector normal_gV = Vector(0, 0);
-	Vector normal_bV = Vector(0, 0);
+	Vector origin = Vector(0, 0);
+	Vector normal_0 = Vector(0, 0);
+	Vector normal_1 = Vector(0, 0);
+	Vector normal_2 = Vector(0, 0);
+	Vector normal_3 = Vector(0, 0);
 } HalftoneInfo;
 
 #ifdef __cplusplus
