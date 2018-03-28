@@ -3,6 +3,8 @@
 #define HALFTONE_SAMPLER_H
 
 struct Sampler {
+	Vector normal = Vector(0, 0);
+	double angle;
 	Vector p1 = Vector(0, 0);
 	Vector p2 = Vector(0, 0);
 	Vector p3 = Vector(0, 0);
@@ -12,20 +14,12 @@ struct Sampler {
 	PF_Pixel8 sample3 = PF_Pixel8();
 	PF_Pixel8 sample4 = PF_Pixel8();
 
-	Sampler(double x, double y) {
+	Sampler(double x, double y, Vector n) {
 		p1.x = x;
 		p1.y = y;
-	}
-
-	double getRadiusShape8(
-		A_u_char input,
-		A_u_char mode,
-
-	) {
-		double res = 1.0 - input / 255.0;
-		res = res + sin(res * PI2) * 0.125;
-
-		return res;
+		normal.x = n.x;
+		normal.y = n.y;
+		angle = atan2(normal.y, normal.x);
 	}
 
 	void writeChannel8(
@@ -37,8 +31,36 @@ struct Sampler {
 		double radius_max,
 		double aa
 	) {
+		double scale = 1.0 - sample / 255.0;
+		scale = scale + scale - (3 * pow(scale, 2) - 2 * pow(scale, 3));
+
+		if (mode > 1) {
+			double theta = atan2(dot.y - point.y, dot.x - point.x);
+
+			if (mode == 2) {
+				// square
+				scale += abs(SQRT2_HALF_MINUS_ONE * sin(2 * theta) * scale);
+			} else if (mode == 3) {
+				// euclidean dot
+				double r2 = scale + abs(SQRT2_MINUS_ONE * sin(2 * theta) * scale);
+				scale = BLEND(scale, r2, scale);
+			} else if (mode == 4) {
+				// ellipse
+				scale *= 1.414 * sin(theta + angle);
+			} else if (mode == 5) {
+				// line
+				scale *= 1.414 * sin(theta + angle);
+			} else if (mode == 6) {
+				// diamond
+				scale -= abs(SQRT2_HALF_MINUS_ONE * sin(2 * theta) * scale);
+			} else {
+				// flower
+				scale *= SQRT2 * abs(sin(2 * theta));
+			}
+		}
+
+		double radius = radius_max * scale;
 		double distance = point.getDistanceTo(&dot);
-		double radius = radius_max * getRadiusShape8(sample);
 
 		if (distance < radius) {
 			*out = (A_u_char)max(0.0, (*out - (CLAMP(0.0, 1.0, (radius - distance) / aa) * 255)));
@@ -121,7 +143,8 @@ Sampler getSampler(double x, double y, Vector origin, Vector normal, double step
 	// set first point to nearest gridpoint
 	Sampler res = Sampler(
 		x - normal.x * normal_scale + normal.y * line_scale,
-		y - normal.y * normal_scale - normal.x * line_scale
+		y - normal.y * normal_scale - normal.x * line_scale,
+		normal
 	);
 
 	// calculate cell corners

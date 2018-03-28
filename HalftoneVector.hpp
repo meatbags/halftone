@@ -8,6 +8,10 @@
 #define PI2 6.28318531
 #define PI 3.14159265
 #define HALF_PI 1.57079632
+#define SQRT2 1.41421356
+#define SQRT2_HALF 0.70710678
+#define SQRT2_MINUS_ONE 0.41421356
+#define SQRT2_HALF_MINUS_ONE 0.20710678
 #define CLAMP(mn, mx, x) (max(mn, min(mx, x)))
 #define BLEND(a, b, x) (a * (1 - x) + b * x)
 

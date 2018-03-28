@@ -85,7 +85,7 @@ Render(
 
 	// get user options
 	AEFX_CLR_STRUCT(info);
-	info.mode = params[PARAM_MODE]->u.pd.value;
+	info.mode = (A_u_char)params[PARAM_MODE]->u.pd.value;
 	info.grid_step = ((double)params[PARAM_RADIUS]->u.fs_d.value) * ((double)inputP->width / (double)in_data->width);
 	info.grid_half_step = info.grid_step * 0.5;
 	info.aa = max(1.0, (double)params[PARAM_AA]->u.fs_d.value);
@@ -150,7 +150,7 @@ static PF_Err ParamsSetup(
 ) {
 	PF_ParamDef	def;
 	AEFX_CLR_STRUCT(def);
-	PF_ADD_POPUP("Mode", 3, 1, "Round|Square|Euclidean Dot|Ellipse|Line", PARAM_MODE);
+	PF_ADD_POPUP("Mode", 7, 1, "Round|Square|Euclidean Dot|Ellipse|Line|Diamond|Flower", PARAM_MODE);
 	AEFX_CLR_STRUCT(def);
 	PF_ADD_FLOAT_SLIDER("Size", 0, 256, 0, 32, 0, 12, 0, 0, 0, PARAM_RADIUS);
 	AEFX_CLR_STRUCT(def);
