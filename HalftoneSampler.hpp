@@ -4,22 +4,99 @@
 
 struct Sampler {
 	Vector normal = Vector(0, 0);
-	double angle;
 	Vector p1 = Vector(0, 0);
 	Vector p2 = Vector(0, 0);
 	Vector p3 = Vector(0, 0);
 	Vector p4 = Vector(0, 0);
-	PF_Pixel8 sample1 = PF_Pixel8();
-	PF_Pixel8 sample2 = PF_Pixel8();
-	PF_Pixel8 sample3 = PF_Pixel8();
-	PF_Pixel8 sample4 = PF_Pixel8();
+	PF_Pixel8 sample8_1 = PF_Pixel8();
+	PF_Pixel8 sample8_2 = PF_Pixel8();
+	PF_Pixel8 sample8_3 = PF_Pixel8();
+	PF_Pixel8 sample8_4 = PF_Pixel8();
+	PF_Pixel16 sample16_1 = PF_Pixel16();
+	PF_Pixel16 sample16_2 = PF_Pixel16();
+	PF_Pixel16 sample16_3 = PF_Pixel16();
+	PF_Pixel16 sample16_4 = PF_Pixel16();
 
 	Sampler(double x, double y, Vector n) {
 		p1.x = x;
 		p1.y = y;
 		normal.x = n.x;
 		normal.y = n.y;
-		angle = atan2(normal.y, normal.x);
+	}
+
+	double shapeDistance(
+		Vector point,
+		Vector dot,
+		A_u_char mode
+	) {
+		double d;
+
+		if (mode == 5) {
+			// line
+			double dp = (point.x - dot.x) * normal.x + (point.y - dot.y) * normal.y;
+			d = hypot(normal.x * dp, normal.y * dp);
+		} else if (mode == 4) {
+			// ellipse
+			double mag = hypot(point.x - dot.x, point.y - dot.y);
+
+			if (mag == 0.0) {
+				d = 0.0;
+			} else {
+				double dp = abs((point.x - dot.x) / mag * normal.x + (point.y - dot.y) / mag * normal.y);
+				d = point.getDistanceTo(&dot);
+				d = (d * (1 - SQRT2_HALF_MINUS_ONE)) + dp * d * SQRT2_MINUS_ONE;
+			}
+		} else {
+			// all other shapes
+			d = point.getDistanceTo(&dot);
+		}
+
+		return d;
+	}
+
+	double shapeRadius (
+		double r,
+		Vector point,
+		Vector dot,
+		A_u_char mode
+	) {
+		// apply easing, convert radius to shape
+		if (mode != 5) {
+			r = r + r - (3 * pow(r, 2) - 2 * pow(r, 3));
+		} else {
+			r = pow(r, 2);
+		}
+
+		if (mode != 1 && mode != 4 && mode != 5) {
+			double theta = atan2(dot.y - point.y, dot.x - point.x);
+
+			if (mode == 2) {
+				// square
+				double st = abs(sin(theta));
+				double ct = abs(cos(theta));
+				r += (st > ct) ? r - st * r : r - ct * r;
+			} else if (mode == 3) {
+				// euclidean dot
+				double st = abs(sin(theta));
+				double ct = abs(cos(theta));
+				double square = r + ((st > ct) ? r - st * r : r - ct * r);
+				if (r <= 0.5) {
+					r = BLEND(r, square, r * 2);
+				}
+				else {
+					double r_max = r + abs(SQRT2_MINUS_ONE * sin(2 * theta) * r);
+					r = BLEND(square, r_max, pow((r - 0.5) * 2, 0.4));
+				}
+			} else if (mode == 6) {
+				// diamond (smooth)
+				r -= abs(SQRT2_HALF_MINUS_ONE * sin(2 * theta) * r);
+			} else {
+				// flower
+				r *= SQRT2 * abs(sin(2 * theta));
+			}
+		}
+
+		return r;
 	}
 
 	void writeChannel8(
@@ -31,39 +108,30 @@ struct Sampler {
 		double radius_max,
 		double aa
 	) {
-		double scale = 1.0 - sample / 255.0;
-		scale = scale + scale - (3 * pow(scale, 2) - 2 * pow(scale, 3));
-
-		if (mode > 1) {
-			double theta = atan2(dot.y - point.y, dot.x - point.x);
-
-			if (mode == 2) {
-				// square
-				scale += abs(SQRT2_HALF_MINUS_ONE * sin(2 * theta) * scale);
-			} else if (mode == 3) {
-				// euclidean dot
-				double r2 = scale + abs(SQRT2_MINUS_ONE * sin(2 * theta) * scale);
-				scale = BLEND(scale, r2, scale);
-			} else if (mode == 4) {
-				// ellipse
-				scale *= 1.414 * sin(theta + angle);
-			} else if (mode == 5) {
-				// line
-				scale *= 1.414 * sin(theta + angle);
-			} else if (mode == 6) {
-				// diamond
-				scale -= abs(SQRT2_HALF_MINUS_ONE * sin(2 * theta) * scale);
-			} else {
-				// flower
-				scale *= SQRT2 * abs(sin(2 * theta));
-			}
-		}
-
-		double radius = radius_max * scale;
-		double distance = point.getDistanceTo(&dot);
+		// write to channel if inside dot
+		double radius = radius_max * shapeRadius(1.0 - sample / 255.0, point, dot, mode);
+		double distance = shapeDistance(point, dot, mode);
 
 		if (distance < radius) {
 			*out = (A_u_char)max(0.0, (*out - (CLAMP(0.0, 1.0, (radius - distance) / aa) * 255)));
+		}
+	}
+
+	void writeChannel16(
+		A_u_short *out,
+		A_u_short sample,
+		Vector point,
+		Vector dot,
+		A_u_char mode,
+		double radius_max,
+		double aa
+	) {
+		// write to channel if inside dot
+		double radius = radius_max * shapeRadius(1.0 - sample / (double)PF_MAX_CHAN16, point, dot, mode);
+		double distance = shapeDistance(point, dot, mode);
+
+		if (distance < radius) {
+			*out = (A_u_short)max(0.0, (*out - (CLAMP(0.0, 1.0, (radius - distance) / aa) * PF_MAX_CHAN16)));
 		}
 	}
 
@@ -77,51 +145,108 @@ struct Sampler {
 	) {
 		PF_Err err = PF_Err_NONE;
 
+		// write target channel
 		if (channel == 1) {
-			writeChannel8(ch, sample1.red, point, p1, mode, radius, aa);
-			writeChannel8(ch, sample2.red, point, p2, mode, radius, aa);
-			writeChannel8(ch, sample3.red, point, p3, mode, radius, aa);
-			writeChannel8(ch, sample4.red, point, p4, mode, radius, aa);
+			writeChannel8(ch, sample8_1.red, point, p1, mode, radius, aa);
+			writeChannel8(ch, sample8_2.red, point, p2, mode, radius, aa);
+			writeChannel8(ch, sample8_3.red, point, p3, mode, radius, aa);
+			writeChannel8(ch, sample8_4.red, point, p4, mode, radius, aa);
 		} else if (channel == 2) {
-			writeChannel8(ch, sample1.green, point, p1, mode, radius, aa);
-			writeChannel8(ch, sample2.green, point, p2, mode, radius, aa);
-			writeChannel8(ch, sample3.green, point, p3, mode, radius, aa);
-			writeChannel8(ch, sample4.green, point, p4, mode, radius, aa);
+			writeChannel8(ch, sample8_1.green, point, p1, mode, radius, aa);
+			writeChannel8(ch, sample8_2.green, point, p2, mode, radius, aa);
+			writeChannel8(ch, sample8_3.green, point, p3, mode, radius, aa);
+			writeChannel8(ch, sample8_4.green, point, p4, mode, radius, aa);
 		} else {
-			writeChannel8(ch, sample1.blue, point, p1, mode, radius, aa);
-			writeChannel8(ch, sample2.blue, point, p2, mode, radius, aa);
-			writeChannel8(ch, sample3.blue, point, p3, mode, radius, aa);
-			writeChannel8(ch, sample4.blue, point, p4, mode, radius, aa);
+			writeChannel8(ch, sample8_1.blue, point, p1, mode, radius, aa);
+			writeChannel8(ch, sample8_2.blue, point, p2, mode, radius, aa);
+			writeChannel8(ch, sample8_3.blue, point, p3, mode, radius, aa);
+			writeChannel8(ch, sample8_4.blue, point, p4, mode, radius, aa);
 		}
 
 		return err;
 	}
 
-	PF_Err sample(
+	PF_Err write16(
+		int channel,
+		A_u_short *ch,
+		Vector point,
+		A_u_char mode,
+		double radius,
+		double aa
+	) {
+		PF_Err err = PF_Err_NONE;
+
+		// write target channel
+		if (channel == 1) {
+			writeChannel16(ch, sample16_1.red, point, p1, mode, radius, aa);
+			writeChannel16(ch, sample16_2.red, point, p2, mode, radius, aa);
+			writeChannel16(ch, sample16_3.red, point, p3, mode, radius, aa);
+			writeChannel16(ch, sample16_4.red, point, p4, mode, radius, aa);
+		}
+		else if (channel == 2) {
+			writeChannel16(ch, sample16_1.green, point, p1, mode, radius, aa);
+			writeChannel16(ch, sample16_2.green, point, p2, mode, radius, aa);
+			writeChannel16(ch, sample16_3.green, point, p3, mode, radius, aa);
+			writeChannel16(ch, sample16_4.green, point, p4, mode, radius, aa);
+		}
+		else {
+			writeChannel16(ch, sample16_1.blue, point, p1, mode, radius, aa);
+			writeChannel16(ch, sample16_2.blue, point, p2, mode, radius, aa);
+			writeChannel16(ch, sample16_3.blue, point, p3, mode, radius, aa);
+			writeChannel16(ch, sample16_4.blue, point, p4, mode, radius, aa);
+		}
+
+		return err;
+	}
+
+	PF_Err sample8(
 		PF_Sampling8Suite1 *sampling_suite,
 		PF_ProgPtr effect_ref,
 		HalftoneInfo *info
 	) {
-		// sample image at gridpoints
 		PF_Err err = PF_Err_NONE;
 		double width = info->samp_pb.src->width - 1;
 		double height = info->samp_pb.src->height - 1;
 		
+		// sample nearest gridpoints
 		Vector s1 = getGridPoint(p1.x, p1.y, info->origin, info->normal_0, info->grid_step, info->grid_half_step);
 		s1.clamp(width, height);
-		ERR(sampling_suite->nn_sample(effect_ref, D2FIX(s1.x), D2FIX(s1.y), &info->samp_pb, &sample1));
-		
+		ERR(sampling_suite->nn_sample(effect_ref, D2FIX(s1.x), D2FIX(s1.y), &info->samp_pb, &sample8_1));
 		Vector s2 = getGridPoint(p2.x, p2.y, info->origin, info->normal_0, info->grid_step, info->grid_half_step);
 		s2.clamp(width, height);
-		ERR(sampling_suite->nn_sample(effect_ref, D2FIX(s2.x), D2FIX(s2.y), &info->samp_pb, &sample2));
-		
+		ERR(sampling_suite->nn_sample(effect_ref, D2FIX(s2.x), D2FIX(s2.y), &info->samp_pb, &sample8_2));
 		Vector s3 = getGridPoint(p3.x, p3.y, info->origin, info->normal_0, info->grid_step, info->grid_half_step);
 		s3.clamp(width, height);
-		ERR(sampling_suite->nn_sample(effect_ref, D2FIX(s3.x), D2FIX(s3.y), &info->samp_pb, &sample3));
-		
+		ERR(sampling_suite->nn_sample(effect_ref, D2FIX(s3.x), D2FIX(s3.y), &info->samp_pb, &sample8_3));
 		Vector s4 = getGridPoint(p4.x, p4.y, info->origin, info->normal_0, info->grid_step, info->grid_half_step);
 		s4.clamp(width, height);
-		ERR(sampling_suite->nn_sample(effect_ref, D2FIX(s4.x), D2FIX(s4.y), &info->samp_pb, &sample4));
+		ERR(sampling_suite->nn_sample(effect_ref, D2FIX(s4.x), D2FIX(s4.y), &info->samp_pb, &sample8_4));
+
+		return err;
+	}
+
+	PF_Err sample16(
+		PF_Sampling16Suite1 *sampling_suite,
+		PF_ProgPtr effect_ref,
+		HalftoneInfo *info
+	) {
+		PF_Err err = PF_Err_NONE;
+		double width = info->samp_pb.src->width - 1;
+		double height = info->samp_pb.src->height - 1;
+
+		// sample nearest gridpoints
+		Vector s1 = getGridPoint(p1.x, p1.y, info->origin, info->normal_0, info->grid_step, info->grid_half_step);
+		s1.clamp(width, height);
+		ERR(sampling_suite->nn_sample16(effect_ref, D2FIX(s1.x), D2FIX(s1.y), &info->samp_pb, &sample16_1));
+		Vector s2 = getGridPoint(p2.x, p2.y, info->origin, info->normal_0, info->grid_step, info->grid_half_step);
+		s2.clamp(width, height);
+		ERR(sampling_suite->nn_sample16(effect_ref, D2FIX(s2.x), D2FIX(s2.y), &info->samp_pb, &sample16_2));
+		Vector s3 = getGridPoint(p3.x, p3.y, info->origin, info->normal_0, info->grid_step, info->grid_half_step);
+		s3.clamp(width, height);
+		ERR(sampling_suite->nn_sample16(effect_ref, D2FIX(s3.x), D2FIX(s3.y), &info->samp_pb, &sample16_3));
+		Vector s4 = getGridPoint(p4.x, p4.y, info->origin, info->normal_0, info->grid_step, info->grid_half_step);
+		s4.clamp(width, height);
+		ERR(sampling_suite->nn_sample16(effect_ref, D2FIX(s4.x), D2FIX(s4.y), &info->samp_pb, &sample16_4));
 
 		return err;
 	}

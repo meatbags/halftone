@@ -19,9 +19,9 @@ static PF_Err Halftone8(
 	Sampler sampler_c = getSampler(vec.x, vec.y, info->origin, info->normal_1, info->grid_step, info->grid_half_step);
 	Sampler sampler_m = getSampler(vec.x, vec.y, info->origin, info->normal_2, info->grid_step, info->grid_half_step);
 	Sampler sampler_y = getSampler(vec.x, vec.y, info->origin, info->normal_3, info->grid_step, info->grid_half_step);
-	ERR(sampler_c.sample(sampling_suite, in_data->effect_ref, info));
-	ERR(sampler_m.sample(sampling_suite, in_data->effect_ref, info));
-	ERR(sampler_y.sample(sampling_suite, in_data->effect_ref, info));
+	ERR(sampler_c.sample8(sampling_suite, in_data->effect_ref, info));
+	ERR(sampler_m.sample8(sampling_suite, in_data->effect_ref, info));
+	ERR(sampler_y.sample8(sampling_suite, in_data->effect_ref, info));
 
 	// reset output, write channels
 	outP->alpha = inP->alpha;
@@ -52,20 +52,34 @@ Halftone16(
 ) {
 	PF_Err err = PF_Err_NONE;
 	register HalftoneInfo *info = (HalftoneInfo*)refcon;
-	PF_InData *in_data = &(info->in_data);
+	PF_InData *in_data = &info->in_data;
 	AEGP_SuiteHandler suites(in_data->pica_basicP);
-	PF_Fixed xF = xL << 16;
-	PF_Fixed yF = yL << 16;
+	PF_Sampling16Suite1 *sampling_suite = suites.Sampling16Suite1();
+	Vector vec(xL, yL);
 
-	ERR(
-		suites.Sampling16Suite1()->subpixel_sample16(
-			in_data->effect_ref,
-			xF,
-			yF,
-			&info->samp_pb,
-			outP
-		)
-	);
+	// sample all colour grids
+	Sampler sampler_c = getSampler(vec.x, vec.y, info->origin, info->normal_1, info->grid_step, info->grid_half_step);
+	Sampler sampler_m = getSampler(vec.x, vec.y, info->origin, info->normal_2, info->grid_step, info->grid_half_step);
+	Sampler sampler_y = getSampler(vec.x, vec.y, info->origin, info->normal_3, info->grid_step, info->grid_half_step);
+	ERR(sampler_c.sample16(sampling_suite, in_data->effect_ref, info));
+	ERR(sampler_m.sample16(sampling_suite, in_data->effect_ref, info));
+	ERR(sampler_y.sample16(sampling_suite, in_data->effect_ref, info));
+
+	// reset output, write channels
+	outP->alpha = inP->alpha;
+	outP->red = PF_MAX_CHAN16;
+	outP->green = PF_MAX_CHAN16;
+	outP->blue = PF_MAX_CHAN16;
+	ERR(sampler_c.write16(1, &outP->red, vec, info->mode, info->grid_step, info->aa));
+	ERR(sampler_m.write16(2, &outP->green, vec, info->mode, info->grid_step, info->aa));
+	ERR(sampler_y.write16(3, &outP->blue, vec, info->mode, info->grid_step, info->aa));
+
+	if (info->greyscale) {
+		A_u_short average = (A_u_short)floor((outP->red + outP->green + outP->blue) / 3.0);
+		outP->red = average;
+		outP->green = average;
+		outP->blue = average;
+	}
 
 	return err;
 }
@@ -88,7 +102,7 @@ Render(
 	info.mode = (A_u_char)params[PARAM_MODE]->u.pd.value;
 	info.grid_step = ((double)params[PARAM_RADIUS]->u.fs_d.value) * ((double)inputP->width / (double)in_data->width);
 	info.grid_half_step = info.grid_step * 0.5;
-	info.aa = max(1.0, (double)params[PARAM_AA]->u.fs_d.value);
+	info.aa = max(0.25, (double)params[PARAM_AA]->u.fs_d.value);
 	info.angle_0 = FIX2D(params[PARAM_ANGLE_0]->u.ad.value) * PF_RAD_PER_DEGREE;
 	info.angle_1 = FIX2D(params[PARAM_ANGLE_1]->u.ad.value) * PF_RAD_PER_DEGREE;
 	info.angle_2 = FIX2D(params[PARAM_ANGLE_2]->u.ad.value) * PF_RAD_PER_DEGREE;
@@ -97,8 +111,8 @@ Render(
 	info.in_data = *in_data;
 	info.ref = in_data->effect_ref;
 	info.samp_pb.src = inputP;
-	info.samp_pb.x_radius = D2FIX(2.0);
-	info.samp_pb.y_radius = D2FIX(2.0);
+	//info.samp_pb.x_radius = D2FIX(2.0);
+	//info.samp_pb.y_radius = D2FIX(2.0);
 
 	// get grid vectors
 	double centre_x = 0; // inputP->width * 0.5 - fmod(inputP->width * 0.5, info.grid_step);
@@ -154,15 +168,15 @@ static PF_Err ParamsSetup(
 	AEFX_CLR_STRUCT(def);
 	PF_ADD_FLOAT_SLIDER("Size", 0, 256, 0, 32, 0, 12, 0, 0, 0, PARAM_RADIUS);
 	AEFX_CLR_STRUCT(def);
-	PF_ADD_FLOAT_SLIDER("Soften", 1, 256, 1, 32, 0, 1, 0, 0, 0, PARAM_AA);
+	PF_ADD_FLOAT_SLIDER("Soften", 0, 256, 0, 32, 0, 1, 0, 0, 0, PARAM_AA);
 	AEFX_CLR_STRUCT(def);
-	PF_ADD_ANGLE("Sample", 30, PARAM_ANGLE_0);
+	PF_ADD_ANGLE("Sample", 45, PARAM_ANGLE_0);
 	AEFX_CLR_STRUCT(def);
-	PF_ADD_ANGLE("Channel 1", 162, PARAM_ANGLE_1);
+	PF_ADD_ANGLE("Channel 1", 45, PARAM_ANGLE_1);
 	AEFX_CLR_STRUCT(def);
-	PF_ADD_ANGLE("Channel 2", 109, PARAM_ANGLE_2);
+	PF_ADD_ANGLE("Channel 2", 60, PARAM_ANGLE_2);
 	AEFX_CLR_STRUCT(def);
-	PF_ADD_ANGLE("Channel 3", 45, PARAM_ANGLE_3);
+	PF_ADD_ANGLE("Channel 3", 90, PARAM_ANGLE_3);
 	AEFX_CLR_STRUCT(def);
 	PF_ADD_CHECKBOXX("Greyscale", 0, 0, PARAM_USE_GREYSCALE);
 	out_data->num_params = PARAM_COUNT;
