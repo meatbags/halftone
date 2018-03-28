@@ -10,18 +10,15 @@ static PF_Err Halftone8(
 ) {
 	PF_Err err = PF_Err_NONE;
 	register HalftoneInfo *info = (HalftoneInfo*)refcon;
-	PF_InData *in_data = &info->in_data;
-	AEGP_SuiteHandler suites(in_data->pica_basicP);
-	PF_Sampling8Suite1 *sampling_suite = suites.Sampling8Suite1();
-	Vector vec(xL, yL);
 
-	// sample all colour grids
+	// sample CMY colour grids
+	Vector vec(xL, yL);
 	Sampler sampler_c = getSampler(vec.x, vec.y, info->origin, info->normal_1, info->grid_step, info->grid_half_step);
 	Sampler sampler_m = getSampler(vec.x, vec.y, info->origin, info->normal_2, info->grid_step, info->grid_half_step);
 	Sampler sampler_y = getSampler(vec.x, vec.y, info->origin, info->normal_3, info->grid_step, info->grid_half_step);
-	ERR(sampler_c.sample8(sampling_suite, in_data->effect_ref, info));
-	ERR(sampler_m.sample8(sampling_suite, in_data->effect_ref, info));
-	ERR(sampler_y.sample8(sampling_suite, in_data->effect_ref, info));
+	ERR(sampler_c.sample8(info));
+	ERR(sampler_m.sample8(info));
+	ERR(sampler_y.sample8(info));
 
 	// reset output, write channels
 	outP->alpha = inP->alpha;
@@ -52,18 +49,15 @@ Halftone16(
 ) {
 	PF_Err err = PF_Err_NONE;
 	register HalftoneInfo *info = (HalftoneInfo*)refcon;
-	PF_InData *in_data = &info->in_data;
-	AEGP_SuiteHandler suites(in_data->pica_basicP);
-	PF_Sampling16Suite1 *sampling_suite = suites.Sampling16Suite1();
-	Vector vec(xL, yL);
 
-	// sample all colour grids
+	// sample CMY colour grids
+	Vector vec(xL, yL);
 	Sampler sampler_c = getSampler(vec.x, vec.y, info->origin, info->normal_1, info->grid_step, info->grid_half_step);
 	Sampler sampler_m = getSampler(vec.x, vec.y, info->origin, info->normal_2, info->grid_step, info->grid_half_step);
 	Sampler sampler_y = getSampler(vec.x, vec.y, info->origin, info->normal_3, info->grid_step, info->grid_half_step);
-	ERR(sampler_c.sample16(sampling_suite, in_data->effect_ref, info));
-	ERR(sampler_m.sample16(sampling_suite, in_data->effect_ref, info));
-	ERR(sampler_y.sample16(sampling_suite, in_data->effect_ref, info));
+	ERR(sampler_c.sample16(info));
+	ERR(sampler_m.sample16(info));
+	ERR(sampler_y.sample16(info));
 
 	// reset output, write channels
 	outP->alpha = inP->alpha;
@@ -109,8 +103,10 @@ Render(
 	info.angle_3 = FIX2D(params[PARAM_ANGLE_3]->u.ad.value) * PF_RAD_PER_DEGREE;
 	info.greyscale = PF_Boolean((params[PARAM_USE_GREYSCALE]->u.bd.value));
 	info.in_data = *in_data;
-	info.ref = in_data->effect_ref;
 	info.samp_pb.src = inputP;
+
+	info.ref = inputP;
+
 	//info.samp_pb.x_radius = D2FIX(2.0);
 	//info.samp_pb.y_radius = D2FIX(2.0);
 

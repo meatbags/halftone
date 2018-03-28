@@ -2,20 +2,36 @@
 #ifndef HALFTONE_SAMPLER_H
 #define HALFTONE_SAMPLER_H
 
+PF_Pixel16 *getPixel16(
+	PF_EffectWorld *inputP,
+	int x,
+	int y
+) {
+	return ((PF_Pixel16 *)((char*)inputP->data + (y * inputP->rowbytes) + x * sizeof(PF_Pixel16)));
+}
+
+PF_Pixel8 *getPixel8(
+	PF_EffectWorld *inputP,
+	int x,
+	int y
+) {
+	return ((PF_Pixel8 *)((char*)inputP->data + (y * inputP->rowbytes) + x * sizeof(PF_Pixel8)));
+}
+
 struct Sampler {
 	Vector normal = Vector(0, 0);
 	Vector p1 = Vector(0, 0);
 	Vector p2 = Vector(0, 0);
 	Vector p3 = Vector(0, 0);
 	Vector p4 = Vector(0, 0);
-	PF_Pixel8 sample8_1 = PF_Pixel8();
-	PF_Pixel8 sample8_2 = PF_Pixel8();
-	PF_Pixel8 sample8_3 = PF_Pixel8();
-	PF_Pixel8 sample8_4 = PF_Pixel8();
-	PF_Pixel16 sample16_1 = PF_Pixel16();
-	PF_Pixel16 sample16_2 = PF_Pixel16();
-	PF_Pixel16 sample16_3 = PF_Pixel16();
-	PF_Pixel16 sample16_4 = PF_Pixel16();
+	PF_Pixel8 *sample8_1;
+	PF_Pixel8 *sample8_2;
+	PF_Pixel8 *sample8_3;
+	PF_Pixel8 *sample8_4;
+	PF_Pixel16 *sample16_1;
+	PF_Pixel16 *sample16_2;
+	PF_Pixel16 *sample16_3;
+	PF_Pixel16 *sample16_4;
 
 	Sampler(double x, double y, Vector n) {
 		p1.x = x;
@@ -147,20 +163,20 @@ struct Sampler {
 
 		// write target channel
 		if (channel == 1) {
-			writeChannel8(ch, sample8_1.red, point, p1, mode, radius, aa);
-			writeChannel8(ch, sample8_2.red, point, p2, mode, radius, aa);
-			writeChannel8(ch, sample8_3.red, point, p3, mode, radius, aa);
-			writeChannel8(ch, sample8_4.red, point, p4, mode, radius, aa);
+			writeChannel8(ch, sample8_1->red, point, p1, mode, radius, aa);
+			writeChannel8(ch, sample8_2->red, point, p2, mode, radius, aa);
+			writeChannel8(ch, sample8_3->red, point, p3, mode, radius, aa);
+			writeChannel8(ch, sample8_4->red, point, p4, mode, radius, aa);
 		} else if (channel == 2) {
-			writeChannel8(ch, sample8_1.green, point, p1, mode, radius, aa);
-			writeChannel8(ch, sample8_2.green, point, p2, mode, radius, aa);
-			writeChannel8(ch, sample8_3.green, point, p3, mode, radius, aa);
-			writeChannel8(ch, sample8_4.green, point, p4, mode, radius, aa);
+			writeChannel8(ch, sample8_1->green, point, p1, mode, radius, aa);
+			writeChannel8(ch, sample8_2->green, point, p2, mode, radius, aa);
+			writeChannel8(ch, sample8_3->green, point, p3, mode, radius, aa);
+			writeChannel8(ch, sample8_4->green, point, p4, mode, radius, aa);
 		} else {
-			writeChannel8(ch, sample8_1.blue, point, p1, mode, radius, aa);
-			writeChannel8(ch, sample8_2.blue, point, p2, mode, radius, aa);
-			writeChannel8(ch, sample8_3.blue, point, p3, mode, radius, aa);
-			writeChannel8(ch, sample8_4.blue, point, p4, mode, radius, aa);
+			writeChannel8(ch, sample8_1->blue, point, p1, mode, radius, aa);
+			writeChannel8(ch, sample8_2->blue, point, p2, mode, radius, aa);
+			writeChannel8(ch, sample8_3->blue, point, p3, mode, radius, aa);
+			writeChannel8(ch, sample8_4->blue, point, p4, mode, radius, aa);
 		}
 
 		return err;
@@ -178,75 +194,71 @@ struct Sampler {
 
 		// write target channel
 		if (channel == 1) {
-			writeChannel16(ch, sample16_1.red, point, p1, mode, radius, aa);
-			writeChannel16(ch, sample16_2.red, point, p2, mode, radius, aa);
-			writeChannel16(ch, sample16_3.red, point, p3, mode, radius, aa);
-			writeChannel16(ch, sample16_4.red, point, p4, mode, radius, aa);
+			writeChannel16(ch, sample16_1->red, point, p1, mode, radius, aa);
+			writeChannel16(ch, sample16_2->red, point, p2, mode, radius, aa);
+			writeChannel16(ch, sample16_3->red, point, p3, mode, radius, aa);
+			writeChannel16(ch, sample16_4->red, point, p4, mode, radius, aa);
 		}
 		else if (channel == 2) {
-			writeChannel16(ch, sample16_1.green, point, p1, mode, radius, aa);
-			writeChannel16(ch, sample16_2.green, point, p2, mode, radius, aa);
-			writeChannel16(ch, sample16_3.green, point, p3, mode, radius, aa);
-			writeChannel16(ch, sample16_4.green, point, p4, mode, radius, aa);
+			writeChannel16(ch, sample16_1->green, point, p1, mode, radius, aa);
+			writeChannel16(ch, sample16_2->green, point, p2, mode, radius, aa);
+			writeChannel16(ch, sample16_3->green, point, p3, mode, radius, aa);
+			writeChannel16(ch, sample16_4->green, point, p4, mode, radius, aa);
 		}
 		else {
-			writeChannel16(ch, sample16_1.blue, point, p1, mode, radius, aa);
-			writeChannel16(ch, sample16_2.blue, point, p2, mode, radius, aa);
-			writeChannel16(ch, sample16_3.blue, point, p3, mode, radius, aa);
-			writeChannel16(ch, sample16_4.blue, point, p4, mode, radius, aa);
+			writeChannel16(ch, sample16_1->blue, point, p1, mode, radius, aa);
+			writeChannel16(ch, sample16_2->blue, point, p2, mode, radius, aa);
+			writeChannel16(ch, sample16_3->blue, point, p3, mode, radius, aa);
+			writeChannel16(ch, sample16_4->blue, point, p4, mode, radius, aa);
 		}
 
 		return err;
 	}
 
 	PF_Err sample8(
-		PF_Sampling8Suite1 *sampling_suite,
-		PF_ProgPtr effect_ref,
 		HalftoneInfo *info
 	) {
 		PF_Err err = PF_Err_NONE;
 		double width = info->samp_pb.src->width - 1;
 		double height = info->samp_pb.src->height - 1;
 		
-		// sample nearest gridpoints
+		// find nearest sample points
 		Vector s1 = getGridPoint(p1.x, p1.y, info->origin, info->normal_0, info->grid_step, info->grid_half_step);
 		s1.clamp(width, height);
-		ERR(sampling_suite->nn_sample(effect_ref, D2FIX(s1.x), D2FIX(s1.y), &info->samp_pb, &sample8_1));
+		sample8_1 = getPixel8(info->ref, (int)s1.x, (int)s1.y);
 		Vector s2 = getGridPoint(p2.x, p2.y, info->origin, info->normal_0, info->grid_step, info->grid_half_step);
 		s2.clamp(width, height);
-		ERR(sampling_suite->nn_sample(effect_ref, D2FIX(s2.x), D2FIX(s2.y), &info->samp_pb, &sample8_2));
+		sample8_2 = getPixel8(info->ref, (int)s2.x, (int)s2.y);
 		Vector s3 = getGridPoint(p3.x, p3.y, info->origin, info->normal_0, info->grid_step, info->grid_half_step);
 		s3.clamp(width, height);
-		ERR(sampling_suite->nn_sample(effect_ref, D2FIX(s3.x), D2FIX(s3.y), &info->samp_pb, &sample8_3));
+		sample8_3 = getPixel8(info->ref, (int)s3.x, (int)s3.y);
 		Vector s4 = getGridPoint(p4.x, p4.y, info->origin, info->normal_0, info->grid_step, info->grid_half_step);
 		s4.clamp(width, height);
-		ERR(sampling_suite->nn_sample(effect_ref, D2FIX(s4.x), D2FIX(s4.y), &info->samp_pb, &sample8_4));
+		sample8_4 = getPixel8(info->ref, (int)s4.x, (int)s4.y);
 
 		return err;
 	}
 
 	PF_Err sample16(
-		PF_Sampling16Suite1 *sampling_suite,
-		PF_ProgPtr effect_ref,
 		HalftoneInfo *info
 	) {
 		PF_Err err = PF_Err_NONE;
 		double width = info->samp_pb.src->width - 1;
 		double height = info->samp_pb.src->height - 1;
 
-		// sample nearest gridpoints
+		// find nearest sample points
 		Vector s1 = getGridPoint(p1.x, p1.y, info->origin, info->normal_0, info->grid_step, info->grid_half_step);
 		s1.clamp(width, height);
-		ERR(sampling_suite->nn_sample16(effect_ref, D2FIX(s1.x), D2FIX(s1.y), &info->samp_pb, &sample16_1));
+		sample16_1 = getPixel16(info->ref, (int)s1.x, (int)s1.y);
 		Vector s2 = getGridPoint(p2.x, p2.y, info->origin, info->normal_0, info->grid_step, info->grid_half_step);
 		s2.clamp(width, height);
-		ERR(sampling_suite->nn_sample16(effect_ref, D2FIX(s2.x), D2FIX(s2.y), &info->samp_pb, &sample16_2));
+		sample16_2 = getPixel16(info->ref, (int)s2.x, (int)s2.y);
 		Vector s3 = getGridPoint(p3.x, p3.y, info->origin, info->normal_0, info->grid_step, info->grid_half_step);
 		s3.clamp(width, height);
-		ERR(sampling_suite->nn_sample16(effect_ref, D2FIX(s3.x), D2FIX(s3.y), &info->samp_pb, &sample16_3));
+		sample16_3 = getPixel16(info->ref, (int)s3.x, (int)s3.y);
 		Vector s4 = getGridPoint(p4.x, p4.y, info->origin, info->normal_0, info->grid_step, info->grid_half_step);
 		s4.clamp(width, height);
-		ERR(sampling_suite->nn_sample16(effect_ref, D2FIX(s4.x), D2FIX(s4.y), &info->samp_pb, &sample16_4));
+		sample16_4 = getPixel16(info->ref, (int)s4.x, (int)s4.y);
 
 		return err;
 	}

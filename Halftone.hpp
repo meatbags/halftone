@@ -53,10 +53,11 @@ typedef struct {
 	double angle_1;
 	double angle_2;
 	double angle_3;
+	PF_EffectWorld *ref;
 	PF_InData in_data;
 	PF_SampPB samp_pb;
 	PF_Boolean greyscale;
-	PF_ProgPtr ref;
+	//PF_ProgPtr ref;
 	Vector origin = Vector(0, 0);
 	Vector normal_0 = Vector(0, 0);
 	Vector normal_1 = Vector(0, 0);
