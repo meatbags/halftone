@@ -1,3 +1,5 @@
+![screenshot](https://github.com/meatbags/halftone/blob/master/img/screenshot.jpg "screenshot")
+
 # Halftone
 Colour-halftone operations for Adobe After Effects. Lots of options. 8 and 16-bit colour support.
 

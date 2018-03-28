@@ -162,7 +162,7 @@ static PF_Err ParamsSetup(
 	AEFX_CLR_STRUCT(def);
 	PF_ADD_POPUP("Mode", 7, 1, "Round|Square|Euclidean Dot|Ellipse|Line|Diamond|Flower", PARAM_MODE);
 	AEFX_CLR_STRUCT(def);
-	PF_ADD_FLOAT_SLIDER("Size", 0, 256, 0, 32, 0, 12, 0, 0, 0, PARAM_RADIUS);
+	PF_ADD_FLOAT_SLIDER("Size", 0, 256, 0, 32, 0, 5, 0, 0, 0, PARAM_RADIUS);
 	AEFX_CLR_STRUCT(def);
 	PF_ADD_FLOAT_SLIDER("Soften", 0, 256, 0, 32, 0, 1, 0, 0, 0, PARAM_AA);
 	AEFX_CLR_STRUCT(def);
@@ -170,9 +170,9 @@ static PF_Err ParamsSetup(
 	AEFX_CLR_STRUCT(def);
 	PF_ADD_ANGLE("Channel 1", 45, PARAM_ANGLE_1);
 	AEFX_CLR_STRUCT(def);
-	PF_ADD_ANGLE("Channel 2", 60, PARAM_ANGLE_2);
+	PF_ADD_ANGLE("Channel 2", 45, PARAM_ANGLE_2);
 	AEFX_CLR_STRUCT(def);
-	PF_ADD_ANGLE("Channel 3", 90, PARAM_ANGLE_3);
+	PF_ADD_ANGLE("Channel 3", 45, PARAM_ANGLE_3);
 	AEFX_CLR_STRUCT(def);
 	PF_ADD_CHECKBOXX("Greyscale", 0, 0, PARAM_USE_GREYSCALE);
 	out_data->num_params = PARAM_COUNT;

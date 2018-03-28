@@ -77,11 +77,8 @@ struct Sampler {
 		A_u_char mode
 	) {
 		// apply easing, convert radius to shape
-		if (mode != 5) {
-			r = r + r - (3 * pow(r, 2) - 2 * pow(r, 3));
-		} else {
-			r = pow(r, 2);
-		}
+		r = pow(r, 2);
+		// r = 3 * pow(r, 2) - 2 * pow(r, 3); ?
 
 		if (mode != 1 && mode != 4 && mode != 5) {
 			double theta = atan2(dot.y - point.y, dot.x - point.x);
