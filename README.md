@@ -1,5 +1,5 @@
 # Halftone
-A colour halftone plugin for Adobe After Effects
+Colour-halftone operations for Adobe After Effects. Lots of options. 8 and 16-bit colour support.
 
 # Install
 Download [halftone.aex](https://github.com/meatbags/halftone/blob/master/binaries/halftone.aex) and copy it to the AfterEffects plugin directory, ie ```[...]\Adobe\Adobe After Effects [version]\Support Files\Plug-ins\Effects```
