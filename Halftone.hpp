@@ -23,7 +23,7 @@ typedef unsigned short PixelType;
 #include "AE_GeneralPlug.h"
 #include "AEFX_ChannelDepthTpl.h"
 #include "AEGP_SuiteHandler.h"
-#include "HalftoneMaths.hpp"
+#include "HalftoneVector.hpp"
 
 #define	MAJOR_VERSION 1
 #define	MINOR_VERSION 0
@@ -33,7 +33,9 @@ typedef unsigned short PixelType;
 
 enum {
 	INPUT_LAYER = 0,
+	PARAM_MODE,
 	PARAM_RADIUS,
+	PARAM_AA,
 	PARAM_ANGLE_0,
 	PARAM_ANGLE_1,
 	PARAM_ANGLE_2,
@@ -43,8 +45,10 @@ enum {
 };
 
 typedef struct {
+	A_u_char mode;
 	double grid_step;
 	double grid_half_step;
+	double aa;
 	double angle_0;
 	double angle_1;
 	double angle_2;
