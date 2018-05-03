@@ -36,7 +36,6 @@ enum {
 	PARAM_MODE,
 	PARAM_RADIUS,
 	PARAM_AA,
-	PARAM_ANGLE_0,
 	PARAM_ANGLE_1,
 	PARAM_ANGLE_2,
 	PARAM_ANGLE_3,
@@ -49,7 +48,7 @@ typedef struct {
 	double grid_step;
 	double grid_half_step;
 	double aa;
-	double angle_0;
+	//double angle_0;
 	double angle_1;
 	double angle_2;
 	double angle_3;
@@ -59,7 +58,6 @@ typedef struct {
 	PF_Boolean greyscale;
 	//PF_ProgPtr ref;
 	Vector origin = Vector(0, 0);
-	Vector normal_0 = Vector(0, 0);
 	Vector normal_1 = Vector(0, 0);
 	Vector normal_2 = Vector(0, 0);
 	Vector normal_3 = Vector(0, 0);

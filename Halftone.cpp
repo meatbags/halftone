@@ -11,24 +11,32 @@ static PF_Err Halftone8(
 	PF_Err err = PF_Err_NONE;
 	register HalftoneInfo *info = (HalftoneInfo*)refcon;
 
-	// sample CMY colour grids
+	// get grid locations
 	Vector vec(xL, yL);
-	Sampler sampler_c = getSampler(vec.x, vec.y, info->origin, info->normal_1, info->grid_step, info->grid_half_step);
-	Sampler sampler_m = getSampler(vec.x, vec.y, info->origin, info->normal_2, info->grid_step, info->grid_half_step);
-	Sampler sampler_y = getSampler(vec.x, vec.y, info->origin, info->normal_3, info->grid_step, info->grid_half_step);
-	ERR(sampler_c.sample8(info));
-	ERR(sampler_m.sample8(info));
-	ERR(sampler_y.sample8(info));
+	Sampler sampler_r = getSampler(vec.x, vec.y, info->origin, info->normal_1, info->grid_step, info->grid_half_step);
+	Sampler sampler_g = getSampler(vec.x, vec.y, info->origin, info->normal_2, info->grid_step, info->grid_half_step);
+	Sampler sampler_b = getSampler(vec.x, vec.y, info->origin, info->normal_3, info->grid_step, info->grid_half_step);
+	Samples8 samp_r;
+	Samples8 samp_g;
+	Samples8 samp_b;
 
-	// reset output, write channels
+	// sample
+	ERR(sampler_r.sample8(info, &samp_r));
+	ERR(sampler_g.sample8(info, &samp_g));
+	ERR(sampler_b.sample8(info, &samp_b));
+
+	// reset
 	outP->alpha = inP->alpha;
-	outP->red = PF_MAX_CHAN8;
-	outP->green = PF_MAX_CHAN8;
-	outP->blue = PF_MAX_CHAN8;
-	ERR(sampler_c.write8(1, &outP->red, vec, info->mode, info->grid_step, info->aa));
-	ERR(sampler_m.write8(2, &outP->green, vec, info->mode, info->grid_step, info->aa));
-	ERR(sampler_y.write8(3, &outP->blue, vec, info->mode, info->grid_step, info->aa));
+	outP->red = 0;
+	outP->green = 0;
+	outP->blue = 0;
+	
+	// write output
+	ERR(sampler_r.write8(1, &outP->red, vec, info->mode, info->grid_step, info->aa, &samp_r));
+	ERR(sampler_g.write8(2, &outP->green, vec, info->mode, info->grid_step, info->aa, &samp_g));
+	ERR(sampler_b.write8(3, &outP->blue, vec, info->mode, info->grid_step, info->aa, &samp_b));
 
+	// greyscale
 	if (info->greyscale) {
 		A_u_char average = (A_u_char)floor((outP->red + outP->green + outP->blue) / 3.0);
 		outP->red = average;
@@ -55,18 +63,25 @@ Halftone16(
 	Sampler sampler_c = getSampler(vec.x, vec.y, info->origin, info->normal_1, info->grid_step, info->grid_half_step);
 	Sampler sampler_m = getSampler(vec.x, vec.y, info->origin, info->normal_2, info->grid_step, info->grid_half_step);
 	Sampler sampler_y = getSampler(vec.x, vec.y, info->origin, info->normal_3, info->grid_step, info->grid_half_step);
-	ERR(sampler_c.sample16(info));
-	ERR(sampler_m.sample16(info));
-	ERR(sampler_y.sample16(info));
+	Samples16 samp_r;
+	Samples16 samp_g;
+	Samples16 samp_b;
+	
+	// sample
+	ERR(sampler_c.sample16(info, &samp_r));
+	ERR(sampler_m.sample16(info, &samp_g));
+	ERR(sampler_y.sample16(info, &samp_b));
 
-	// reset output, write channels
+	// reset
 	outP->alpha = inP->alpha;
-	outP->red = PF_MAX_CHAN16;
-	outP->green = PF_MAX_CHAN16;
-	outP->blue = PF_MAX_CHAN16;
-	ERR(sampler_c.write16(1, &outP->red, vec, info->mode, info->grid_step, info->aa));
-	ERR(sampler_m.write16(2, &outP->green, vec, info->mode, info->grid_step, info->aa));
-	ERR(sampler_y.write16(3, &outP->blue, vec, info->mode, info->grid_step, info->aa));
+	outP->red = 0;
+	outP->green = 0;
+	outP->blue = 0;
+
+	// write channels
+	ERR(sampler_c.write16(1, &outP->red, vec, info->mode, info->grid_step, info->aa, &samp_r));
+	ERR(sampler_m.write16(2, &outP->green, vec, info->mode, info->grid_step, info->aa, &samp_g));
+	ERR(sampler_y.write16(3, &outP->blue, vec, info->mode, info->grid_step, info->aa, &samp_b));
 
 	if (info->greyscale) {
 		A_u_short average = (A_u_short)floor((outP->red + outP->green + outP->blue) / 3.0);
@@ -97,7 +112,6 @@ Render(
 	info.grid_step = ((double)params[PARAM_RADIUS]->u.fs_d.value) * ((double)inputP->width / (double)in_data->width);
 	info.grid_half_step = info.grid_step * 0.5;
 	info.aa = max(0.25, (double)params[PARAM_AA]->u.fs_d.value);
-	info.angle_0 = FIX2D(params[PARAM_ANGLE_0]->u.ad.value) * PF_RAD_PER_DEGREE;
 	info.angle_1 = FIX2D(params[PARAM_ANGLE_1]->u.ad.value) * PF_RAD_PER_DEGREE;
 	info.angle_2 = FIX2D(params[PARAM_ANGLE_2]->u.ad.value) * PF_RAD_PER_DEGREE;
 	info.angle_3 = FIX2D(params[PARAM_ANGLE_3]->u.ad.value) * PF_RAD_PER_DEGREE;
@@ -114,7 +128,6 @@ Render(
 	double centre_x = 0; // inputP->width * 0.5 - fmod(inputP->width * 0.5, info.grid_step);
 	double centre_y = 0; // inputP->height * 0.5 - fmod(inputP->height * 0.5, info.grid_step);
 	info.origin.set(centre_x, centre_y);
-	info.normal_0.set(cos(info.angle_0 + HALF_PI), sin(info.angle_0 + HALF_PI));
 	info.normal_1.set(cos(info.angle_1 + HALF_PI), sin(info.angle_1 + HALF_PI));
 	info.normal_2.set(cos(info.angle_2 + HALF_PI), sin(info.angle_2 + HALF_PI));
 	info.normal_3.set(cos(info.angle_3 + HALF_PI), sin(info.angle_3 + HALF_PI));
@@ -165,8 +178,6 @@ static PF_Err ParamsSetup(
 	PF_ADD_FLOAT_SLIDER("Size", 0, 256, 0, 32, 0, 5, 0, 0, 0, PARAM_RADIUS);
 	AEFX_CLR_STRUCT(def);
 	PF_ADD_FLOAT_SLIDER("Soften", 0, 256, 0, 32, 0, 1, 0, 0, 0, PARAM_AA);
-	AEFX_CLR_STRUCT(def);
-	PF_ADD_ANGLE("Sample", 45, PARAM_ANGLE_0);
 	AEFX_CLR_STRUCT(def);
 	PF_ADD_ANGLE("Channel 1", 45, PARAM_ANGLE_1);
 	AEFX_CLR_STRUCT(def);
